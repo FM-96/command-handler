@@ -61,6 +61,24 @@ module.exports = {
  */
 
 /**
+ * Context passed to a command when it is run
+ * @typedef {Object} CommandContext
+ * @property {Number} argsOffset The index of where in the message the command's arguments start
+ * @property {String} args The command's arguments string
+ * @property {Array<String>} argv List of the command's arguments when split by spaces
+ * @property {String} command The alias used to trigger the command
+ * @property {String} prefix The prefix used to trigger the command
+ * @property {Command} commandObj The command
+ */
+
+/**
+ * Context passed to a task when it is run
+ * @typedef {Object} TaskContext
+ * @property {Array<Task>} matching List of tasks that were triggered by the message
+ * @property {Array<Task>} notMatchingList of tasks that weren't triggered by the message
+ */
+
+/**
  * Function to get a list of moderator roles from a guild ID
  * @typedef {Function} GetModRoles
  * @param {String} guildId ID of the guild to get the mod roles for
@@ -104,8 +122,13 @@ async function checkCommand(message) {
 					const checks = await checkCommandPermissions(commandObj, message);
 
 					if (checks.passChecks) {
+						const argsOffset = commandVariation.length + prefix.length;
+						const args = message.content.slice(argsOffset).trim();
+						/** @type {CommandContext} */
 						const commandContext = {
-							argsOffset: commandVariation.length + prefix.length,
+							argsOffset,
+							args,
+							argv: args ? args.split(/ +/) : [],
 							command: commandVariation,
 							prefix: prefix,
 							commandObj,
@@ -165,6 +188,7 @@ async function checkCommandPermissions(commandObj, message) {
  */
 async function checkTasks(message, excludeLimited) {
 	let limitedSelected = false;
+	/** @type {TaskContext} */
 	const tasksContext = {
 		matching: [],
 		notMatching: [],
@@ -224,7 +248,7 @@ async function checkTaskPermissions(taskObj, message) {
 
 /**
  * Get a list of all registered commands
- * @returns {Array<Object>} Array of command objects
+ * @returns {Array<Command>} Array of command objects
  */
 function getCommands() {
 	return commands.slice();
