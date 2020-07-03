@@ -1,9 +1,11 @@
 module.exports = {
 	checkCommand,
+	checkTasks,
 	registerCommandsFolder,
+	registerTasksFolder,
 	setAdminRoleName,
 	setOwnerId,
-	setPrefix,
+	setPrefixes,
 };
 
 const fs = require('fs');
@@ -12,45 +14,89 @@ const path = require('path');
 const settings = {
 	adminRoleName: false,
 	ownerId: false,
-	prefix: '',
+	prefixes: [''],
 };
 
 const commands = [];
+const tasks = [];
 
 /**
  * Checks whether a message matches a command and if so, runs the command
  * @param {Discord.Message} message The message to handle
- * @returns {Promise<Boolean>} Whether the message matched a command
+ * @returns {Promise<Object>} Information about whether the message matched a command
  */
 async function checkCommand(message) {
-	for (const commandObj of commands) {
-		if (message.content.startsWith(`${settings.prefix}${commandObj.command}`) && /^\s|^$/.test(message.content.slice(`${settings.prefix}${commandObj.command}`.length))) {
-			if (message.channel.type === 'text' && !message.member) {
-				await message.guild.fetchMember(message.author);
-			}
+	for (const prefix of settings.prefixes) {
+		for (const commandObj of commands) {
+			if (message.content.startsWith(`${prefix}${commandObj.command}`) && /^\s|^$/.test(message.content.slice(`${prefix}${commandObj.command}`.length))) {
+				if (message.channel.type === 'text' && !message.member) {
+					await message.guild.fetchMember(message.author);
+				}
 
-			const passOwnerCheck = !commandObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
-			const passAdminCheck = !commandObj.adminOnly || settings.adminRoleName === true || (settings.adminRoleName !== false && message.channel.type === 'text' && message.member.roles.exists('name', settings.adminRoleName));
-			const passChannelTypeCheck = message.channel.type === 'text' ? commandObj.inGuilds !== false : commandObj.inDms !== false;
+				const passOwnerCheck = !commandObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
+				const passAdminCheck = !commandObj.adminOnly || settings.adminRoleName === true || (settings.adminRoleName !== false && message.channel.type === 'text' && message.member.roles.exists('name', settings.adminRoleName));
+				const passChannelTypeCheck = message.channel.type === 'text' ? commandObj.inGuilds !== false : commandObj.inDms !== false;
 
-			if (passOwnerCheck && passAdminCheck && passChannelTypeCheck) {
-				const commandContext = {
+				if (passOwnerCheck && passAdminCheck && passChannelTypeCheck) {
+					const commandContext = {
+						command: commandObj.command,
+						prefix: prefix,
+					};
+					await commandObj.run(message, commandContext);
+				}
+				return {
+					match: true,
 					command: commandObj.command,
-					prefix: settings.prefix,
+					passOwnerCheck,
+					passAdminCheck,
+					passChannelTypeCheck,
 				};
-				await commandObj.run(message, commandContext);
 			}
-			return {
-				match: true,
-				command: commandObj.command,
-				passOwnerCheck,
-				passAdminCheck,
-				passChannelTypeCheck,
-			};
 		}
 	}
 	return {
 		match: false,
+	};
+}
+
+/**
+ * Checks whether a message matches any tasks and if so, runs the tasks
+ * @param {Discord.Message} message The message to handle
+ * @param {Boolean} excludeLimited Whether or not to exclude limited tasks
+ * @returns {Promise<Object>} Information about whether the message matched any tasks
+ */
+async function checkTasks(message, excludeLimited) {
+	let limitedSelected = false;
+	const tasksContext = {
+		matching: [],
+		notMatching: [],
+	};
+	for (const taskObj of tasks) {
+		let testResult;
+		try {
+			testResult = await taskObj.test(message);
+		} catch (err) {
+			testResult = false;
+		}
+		if (testResult && (!taskObj.limited || (!limitedSelected && !excludeLimited))) {
+			tasksContext.matching.push(taskObj);
+			limitedSelected = taskObj.limited;
+		} else {
+			tasksContext.notMatching.push(taskObj);
+		}
+	}
+	for (const taskObj of tasksContext.matching) {
+		try {
+			await taskObj.run(message, tasksContext);
+		} catch (err) {
+			console.error(`Error while running task "${taskObj.name}":`);
+			console.error(err);
+		}
+	}
+	return {
+		match: tasksContext.matching.length !== 0,
+		matching: tasksContext.matching,
+		notMatching: tasksContext.notMatching,
 	};
 }
 
@@ -100,6 +146,42 @@ function registerCommandsFolder(commandsFolder) {
 }
 
 /**
+ * Registers all files in a folder as tasks
+ * @param {String} tasksFolder Absolute path to the folder with the tasks files
+ * @returns {Object} Information about how many tasks were registered and/or deactivated
+ */
+function registerTasksFolder(tasksFolder) {
+	let registered = 0;
+
+	const tasknames = tasks.map(e => e.name);
+
+	const taskFiles = fs.readdirSync(tasksFolder);
+	for (const taskFile of taskFiles) {
+		const taskObj = require(path.join(tasksFolder, taskFile)); // eslint-disable-line global-require
+		if (tasknames.includes(taskObj.name)) {
+			throw new Error('Duplicate task: ' + taskObj.name);
+		}
+		tasks.push(taskObj);
+		tasknames.push(taskObj.name);
+		registered++;
+	}
+	tasks.sort((a, b) => {
+		if (a.name < b.name) {
+			return -1;
+		}
+		if (a.name > b.name) {
+			return 1;
+		}
+		return 0;
+	});
+
+	return {
+		deactivated: 0,
+		registered,
+	};
+}
+
+/**
  * Sets the admin role name
  * @param {String|Boolean} adminRoleName The admin role name, or true to allow all, or false to deny all
  * @returns {void}
@@ -128,13 +210,22 @@ function setOwnerId(ownerId) {
 }
 
 /**
- * Sets the prefix
- * @param {String} prefix The prefix
+ * Sets the prefixes
+ * @param {Array<String>|String} prefixes Prefix or list of prefixes to set
  * @returns {void}
  */
-function setPrefix(prefix) {
-	if (typeof prefix !== 'string') {
-		throw new Error('prefix must be a string');
+function setPrefixes(prefixes) {
+	const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
+	if (prefixList.length === 0) {
+		prefixList.push('');
 	}
-	settings.prefix = prefix;
+
+	const uniquePrefixList = [...new Set(prefixList)];
+	for (const prefix of uniquePrefixList) {
+		if (typeof prefix !== 'string') {
+			throw new Error('All prefixes must be strings');
+		}
+	}
+
+	settings.prefixes = uniquePrefixList;
 }
