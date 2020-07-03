@@ -6,7 +6,7 @@ module.exports = {
 	getGuildPrefixes,
 	registerCommandsFolder,
 	registerTasksFolder,
-	setModRoleName,
+	setModRoleGetter,
 	setOwnerId,
 	setGlobalPrefixes,
 	setGuildPrefixes,
@@ -60,14 +60,21 @@ module.exports = {
  * @property {Boolean} passSelfCheck
  */
 
+/**
+ * Function to get a list of moderator roles from a guild ID
+ * @typedef {Function} GetModRoles
+ * @param {String} guildId ID of the guild to get the mod roles for
+ * @returns {Promise<Array<String>>|Promise<Boolean>} Array of mod role IDs, or true to allow all
+ */
+
 const fs = require('fs');
 const path = require('path');
 
 const settings = {
-	modRoleName: false,
 	ownerId: false,
 	globalPrefixes: [''],
 	guildPrefixes: new Map(),
+	getModRoles: () => [],
 };
 
 /** @type {Array<Command>} */
@@ -94,7 +101,7 @@ async function checkCommand(message) {
 						await message.guild.fetchMember(message.author);
 					}
 
-					const checks = checkCommandPermissions(commandObj, message);
+					const checks = await checkCommandPermissions(commandObj, message);
 
 					if (checks.passChecks) {
 						const commandContext = {
@@ -125,11 +132,13 @@ async function checkCommand(message) {
  * Checks whether a command passes its permission checks
  * @param {Command} commandObj The command to check
  * @param {Discord.Message} message The message of the command
- * @returns {PermissionChecks} Information about whether the command passes the permission checks
+ * @returns {Promise<PermissionChecks>} Information about whether the command passes the permission checks
  */
-function checkCommandPermissions(commandObj, message) {
+async function checkCommandPermissions(commandObj, message) {
+	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
+
 	const passAdminCheck = !commandObj.adminOnly || (message.channel.type === 'text' && message.member.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !commandObj.modOnly || (message.channel.type === 'text' && message.member.hasPermission('ADMINISTRATOR')) || settings.modRoleName === true || (settings.modRoleName !== false && message.channel.type === 'text' && message.member.roles.some(e => e.name === settings.modRoleName));
+	const passModCheck = !commandObj.modOnly || (message.channel.type === 'text' && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.some(e => modRoles.includes(e.id))));
 	const passBotCheck = message.author.bot ? commandObj.allowBots || commandObj.botsOnly || message.author.id === message.client.user.id : !commandObj.botsOnly;
 	const passChannelTypeCheck = message.channel.type === 'text' ? commandObj.inGuilds !== false : commandObj.inDms !== false;
 	const passOwnerCheck = !commandObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
@@ -167,7 +176,7 @@ async function checkTasks(message, excludeLimited) {
 		} catch (err) {
 			testResult = false;
 		}
-		if (testResult && checkTaskPermissions(taskObj, message).passChecks && (!taskObj.limited || (!limitedSelected && !excludeLimited))) {
+		if (testResult && (await checkTaskPermissions(taskObj, message)).passChecks && (!taskObj.limited || (!limitedSelected && !excludeLimited))) {
 			tasksContext.matching.push(taskObj);
 			limitedSelected = taskObj.limited;
 		} else {
@@ -188,11 +197,13 @@ async function checkTasks(message, excludeLimited) {
  * Checks whether a task passes its permission checks
  * @param {Task} taskObj The task to check
  * @param {Discord.Message} message The message that triggered the task
- * @returns {PermissionChecks} Information about whether the task passes the permission checks
+ * @returns {Promise<PermissionChecks>} Information about whether the task passes the permission checks
  */
-function checkTaskPermissions(taskObj, message) {
+async function checkTaskPermissions(taskObj, message) {
+	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
+
 	const passAdminCheck = !taskObj.adminOnly || (message.channel.type === 'text' && message.member.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !taskObj.modOnly || (message.channel.type === 'text' && message.member.hasPermission('ADMINISTRATOR')) || settings.modRoleName === true || (settings.modRoleName !== false && message.channel.type === 'text' && message.member.roles.some(e => e.name === settings.modRoleName));
+	const passModCheck = !taskObj.modOnly || (message.channel.type === 'text' && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.some(e => modRoles.includes(e.id))));
 	const passBotCheck = message.author.bot ? taskObj.allowBots || taskObj.botsOnly || message.author.id === message.client.user.id : !taskObj.botsOnly;
 	const passChannelTypeCheck = message.channel.type === 'text' ? taskObj.inGuilds !== false : taskObj.inDms !== false;
 	const passOwnerCheck = !taskObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
@@ -337,17 +348,15 @@ function registerTasksFolder(tasksFolder) {
 }
 
 /**
- * Sets the moderator role name
- * @param {String|Boolean} modRoleName The moderator role name, or true to allow all, or false to deny all
+ * Sets the function used to get moderator roles
+ * @param {GetModRoles} modRoleGetter The function used to get moderator roles
  * @returns {void}
  */
-function setModRoleName(modRoleName) {
-	if (typeof modRoleName !== 'string' && typeof modRoleName !== 'boolean') {
-		throw new Error('modRoleName must be either a string or a boolean');
-	} else if (modRoleName === '') {
-		throw new Error('modRoleName cannot be an empty string');
+function setModRoleGetter(modRoleGetter) {
+	if (typeof modRoleGetter !== 'function') {
+		throw new Error('modRoleGetter must be a function');
 	}
-	settings.modRoleName = modRoleName;
+	settings.getModRoles = modRoleGetter;
 }
 
 /**
