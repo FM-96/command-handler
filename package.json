@@ -1,0 +1,22 @@
+{
+  "name": "command-handler",
+  "version": "0.1.0",
+  "description": "Personal command handler for discord.js.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FM-96/command-handler.git"
+  },
+  "author": "Felix Müllner",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FM-96/command-handler/issues"
+  },
+  "homepage": "https://github.com/FM-96/command-handler#readme",
+  "devDependencies": {
+    "eslint": "^7.3.1"
+  }
+}
