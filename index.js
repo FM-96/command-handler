@@ -115,7 +115,7 @@ async function checkCommand(message) {
 			const commandVariations = [commandObj.command, ...commandObj.aliases];
 			for (const commandVariation of commandVariations) {
 				if (message.content.toLowerCase().startsWith(`${prefix}${commandVariation}`) && /^\s|^$/.test(message.content.toLowerCase().slice(`${prefix}${commandVariation}`.length))) {
-					if (message.channel.type === 'text' && !message.member) {
+					if (message.guild && !message.member) {
 						await message.guild.fetchMember(message.author);
 					}
 
@@ -160,10 +160,10 @@ async function checkCommand(message) {
 async function checkCommandPermissions(commandObj, message) {
 	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
 
-	const passAdminCheck = !commandObj.adminOnly || (message.channel.type === 'text' && message.member.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !commandObj.modOnly || (message.channel.type === 'text' && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.some(e => modRoles.includes(e.id))));
+	const passAdminCheck = !commandObj.adminOnly || (message.guild && message.member.hasPermission('ADMINISTRATOR'));
+	const passModCheck = !commandObj.modOnly || (message.guild && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.some(e => modRoles.includes(e.id))));
 	const passBotCheck = message.author.bot ? commandObj.allowBots || commandObj.botsOnly || message.author.id === message.client.user.id : !commandObj.botsOnly;
-	const passChannelTypeCheck = message.channel.type === 'text' ? commandObj.inGuilds !== false : commandObj.inDms !== false;
+	const passChannelTypeCheck = message.guild ? commandObj.inGuilds !== false : commandObj.inDms !== false;
 	const passOwnerCheck = !commandObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
 	const passSelfCheck = message.author.id !== message.client.user.id || commandObj.allowSelf;
 
@@ -226,10 +226,10 @@ async function checkTasks(message, excludeLimited) {
 async function checkTaskPermissions(taskObj, message) {
 	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
 
-	const passAdminCheck = !taskObj.adminOnly || (message.channel.type === 'text' && message.member.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !taskObj.modOnly || (message.channel.type === 'text' && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.some(e => modRoles.includes(e.id))));
+	const passAdminCheck = !taskObj.adminOnly || (message.guild && message.member.hasPermission('ADMINISTRATOR'));
+	const passModCheck = !taskObj.modOnly || (message.guild && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.some(e => modRoles.includes(e.id))));
 	const passBotCheck = message.author.bot ? taskObj.allowBots || taskObj.botsOnly || message.author.id === message.client.user.id : !taskObj.botsOnly;
-	const passChannelTypeCheck = message.channel.type === 'text' ? taskObj.inGuilds !== false : taskObj.inDms !== false;
+	const passChannelTypeCheck = message.guild ? taskObj.inGuilds !== false : taskObj.inDms !== false;
 	const passOwnerCheck = !taskObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
 	const passSelfCheck = message.author.id !== message.client.user.id || taskObj.allowSelf;
 
