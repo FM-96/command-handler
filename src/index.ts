@@ -1,20 +1,11 @@
-module.exports = {
-	checkCommand,
-	checkTasks,
-	getCommands,
-	getGlobalPrefixes,
-	getGuildPrefixes,
-	registerCommandsFolder,
-	registerTasksFolder,
-	setModRoleGetter,
-	setOwnerId,
-	setGlobalPrefixes,
-	setGuildPrefixes,
-};
+import { ClientUser, GuildMember, Message } from 'discord.js';
+
+import fs from 'fs';
+import path from 'path';
 
 /**
  * A bot command
- * @typedef {Object} Command
+ * @interface Command
  * @property {Boolean?} disabled Whether the command is disabled (default false)
  * @property {String} command The actual string to call the command with
  * @property {Array<String>} aliases The aliases of the command
@@ -30,10 +21,62 @@ module.exports = {
  * @property {Boolean?} allowSelf Whether the command is usable by this bot (default false)
  * @property {Function} run The function defining command's behaviour
  */
+export interface Command {
+	disabled?: boolean
+	command: string
+	aliases: string[]
+	description?: string
+	usage?: string
+	ownerOnly?: boolean
+	adminOnly?: boolean
+	modOnly?: boolean
+	inGuilds?: boolean
+	inDms?: boolean
+	allowBots?: boolean
+	botsOnly?: boolean
+	allowSelf?: boolean
+	run: (message: Message, context: CommandContext) => Promise<void>
+}
+
+interface FullCommand {
+	disabled: boolean
+	command: string
+	aliases: string[]
+	description: string
+	usage: string
+	ownerOnly: boolean
+	adminOnly: boolean
+	modOnly: boolean
+	inGuilds: boolean
+	inDms: boolean
+	allowBots: boolean
+	botsOnly: boolean
+	allowSelf: boolean
+	run: (message: Message, context: CommandContext) => Promise<void>
+}
+
+function defaultCommandValues(command: Command): FullCommand {
+	return {
+		disabled: command.disabled ?? false,
+		command: command.command,
+		aliases: command.aliases,
+		description: command.description ?? '',
+		usage: command.usage ?? '',
+		ownerOnly: command.ownerOnly ?? false,
+		adminOnly: command.adminOnly ?? false,
+		modOnly: command.modOnly ?? false,
+		inGuilds: command.inGuilds ?? true,
+		inDms: command.inDms ?? true,
+		allowBots: command.allowBots ?? false,
+		botsOnly: command.botsOnly ?? false,
+		allowSelf: command.allowSelf ?? false,
+		run: command.run,
+	};
+}
 
 /**
  * A bot task
- * @typedef {Object} Task
+ * @interface Task
  * @property {Boolean?} disabled Whether the task is disabled (default false)
  * @property {String} name The name of the task (functions as its ID)
  * @property {Boolean} limited Whether a task is limited (at most one limited task can run per message)
@@ -48,21 +91,80 @@ module.exports = {
  * @property {Function} test The function determining whether the task is executed
  * @property {Function} run The function defining task's behaviour
  */
+export interface Task {
+	disabled?: boolean
+	name: string
+	limited: boolean
+	ownerOnly?: boolean
+	adminOnly?: boolean
+	modOnly?: boolean
+	inGuilds?: boolean
+	inDms?: boolean
+	allowBots?: boolean
+	botsOnly?: boolean
+	allowSelf?: boolean
+	test: (message: Message) => Promise<boolean>
+	run: (message: Message, context: TaskContext) => Promise<void>
+}
+
+interface FullTask {
+	disabled: boolean
+	name: string
+	limited: boolean
+	ownerOnly: boolean
+	adminOnly: boolean
+	modOnly: boolean
+	inGuilds: boolean
+	inDms: boolean
+	allowBots: boolean
+	botsOnly: boolean
+	allowSelf: boolean
+	test: (message: Message) => Promise<boolean>
+	run: (message: Message, context: TaskContext) => Promise<void>
+}
+
+function defaultTaskValues(task: Task): FullTask {
+	return {
+		disabled: task.disabled ?? false,
+		name: task.name,
+		limited: task.limited,
+		ownerOnly: task.ownerOnly ?? false,
+		adminOnly: task.adminOnly ?? false,
+		modOnly: task.modOnly ?? false,
+		inGuilds: task.inGuilds ?? true,
+		inDms: task.inDms ?? true,
+		allowBots: task.allowBots ?? false,
+		botsOnly: task.botsOnly ?? false,
+		allowSelf: task.allowSelf ?? false,
+		test: task.test,
+		run: task.run,
+	};
+}
 
 /**
  * Results of checking the permissions of a command or a task
- * @typedef {Object} PermissionChecks
+ * @interface PermissionChecks
  * @property {Boolean} passChecks
  * @property {Boolean} passAdminCheck
+ * @property {Boolean} passModCheck
  * @property {Boolean} passBotCheck
  * @property {Boolean} passChannelTypeCheck
  * @property {Boolean} passOwnerCheck
  * @property {Boolean} passSelfCheck
  */
+export interface PermissionChecks {
+	passChecks: boolean
+	passAdminCheck: boolean
+	passModCheck: boolean
+	passBotCheck: boolean
+	passChannelTypeCheck: boolean
+	passOwnerCheck: boolean
+	passSelfCheck: boolean
+}
 
 /**
  * Context passed to a command when it is run
- * @typedef {Object} CommandContext
+ * @interface CommandContext
  * @property {Number} argsOffset The index of where in the message the command's arguments start
  * @property {String} args The command's arguments string
  * @property {Array<String>} argv List of the command's arguments when split by spaces
@@ -70,45 +172,73 @@ module.exports = {
  * @property {String} prefix The prefix used to trigger the command
  * @property {Command} commandObj The command
  */
+export interface CommandContext {
+	argsOffset: number
+	args: string
+	argv: string[]
+	command: string
+	prefix: string
+	commandObj: Command
+}
 
 /**
  * Context passed to a task when it is run
- * @typedef {Object} TaskContext
+ * @interface TaskContext
  * @property {Array<Task>} matching List of tasks that were triggered by the message
- * @property {Array<Task>} notMatchingList of tasks that weren't triggered by the message
+ * @property {Array<Task>} notMatching of tasks that weren't triggered by the message
  */
+export interface TaskContext {
+	matching: Task[]
+	notMatching: Task[]
+}
 
 /**
  * Function to get a list of moderator roles from a guild ID
  * @typedef {Function} GetModRoles
  * @param {String} guildId ID of the guild to get the mod roles for
- * @returns {Promise<Array<String>>|Promise<Boolean>} Array of mod role IDs, or true to allow all
+ * @returns {Promise<Array<String>|Boolean>} Array of mod role IDs, or true to allow all
  */
+export type GetModRoles = (guildId: string) => Promise<string[] | true>;
 
-const fs = require('fs');
-const path = require('path');
+export interface Settings {
+	ownerId: string | boolean
+	globalPrefixes: string[]
+	guildPrefixes: Map<string, string[]>
+	getModRoles: GetModRoles
+}
 
-const settings = {
+const settings: Settings = {
 	ownerId: false,
 	globalPrefixes: [''],
 	guildPrefixes: new Map(),
-	getModRoles: () => [],
+	getModRoles: async () => [],
 };
 
-/** @type {Array<Command>} */
-const commands = [];
-/** @type {Array<Task>} */
-const tasks = [];
+const commands: Command[] = [];
+const tasks: Task[] = [];
+
+interface CommandMatchNoMatch {
+	match: false
+}
+
+interface CommandMatchMatch {
+	match: true
+	command: string
+	checks: PermissionChecks
+	commandObj: Command
+}
+
+export type CommandMatch = CommandMatchNoMatch | CommandMatchMatch;
 
 /**
  * Checks whether a message matches a command and if so, runs the command
- * @param {Discord.Message} message The message to handle
- * @returns {Promise<Object>} Information about whether the message matched a command
+ * @param {Message} message The message to handle
+ * @returns {Promise<CommandMatch>} Information about whether the message matched a command
  */
-async function checkCommand(message) {
+export async function checkCommand(message: Message): Promise<CommandMatch> {
 	const validPrefixes = settings.globalPrefixes;
 	if (message.guild && settings.guildPrefixes.has(message.guild.id)) {
-		validPrefixes.push(...settings.guildPrefixes.get(message.guild.id));
+		validPrefixes.push(...settings.guildPrefixes.get(message.guild.id) as string[]);
 	}
 	for (const prefix of validPrefixes) {
 		for (const commandObj of commands) {
@@ -130,7 +260,7 @@ async function checkCommand(message) {
 							args,
 							argv: args ? args.split(/ +/) : [],
 							command: commandVariation,
-							prefix: prefix,
+							prefix,
 							commandObj,
 						};
 						await commandObj.run(message, commandContext);
@@ -154,18 +284,23 @@ async function checkCommand(message) {
 /**
  * Checks whether a command passes its permission checks
  * @param {Command} commandObj The command to check
- * @param {Discord.Message} message The message of the command
+ * @param {Message} message The message of the command
  * @returns {Promise<PermissionChecks>} Information about whether the command passes the permission checks
  */
-async function checkCommandPermissions(commandObj, message) {
+async function checkCommandPermissions(commandObj: Command, message: Message): Promise<PermissionChecks> {
 	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
 
-	const passAdminCheck = !commandObj.adminOnly || (message.guild && message.member.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !commandObj.modOnly || (message.guild && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.cache.some(e => modRoles.includes(e.id))));
-	const passBotCheck = message.author.bot ? commandObj.allowBots || commandObj.botsOnly || message.author.id === message.client.user.id : !commandObj.botsOnly;
-	const passChannelTypeCheck = message.guild ? commandObj.inGuilds !== false : commandObj.inDms !== false;
-	const passOwnerCheck = !commandObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
-	const passSelfCheck = message.author.id !== message.client.user.id || commandObj.allowSelf;
+	const fullCommandObj = defaultCommandValues(commandObj);
+
+	const messageMember = message.member as GuildMember;
+	const clientUser = message.client.user as ClientUser;
+
+	const passAdminCheck = !fullCommandObj.adminOnly || (Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
+	const passModCheck = !fullCommandObj.modOnly || (Boolean(message.guild) && (messageMember.hasPermission('ADMINISTRATOR') || modRoles === true || messageMember.roles.cache.some(e => modRoles.includes(e.id))));
+	const passBotCheck = message.author.bot ? fullCommandObj.allowBots || fullCommandObj.botsOnly || message.author.id === clientUser.id : !fullCommandObj.botsOnly;
+	const passChannelTypeCheck = message.guild ? fullCommandObj.inGuilds : fullCommandObj.inDms;
+	const passOwnerCheck = !fullCommandObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
+	const passSelfCheck = message.author.id !== clientUser.id || fullCommandObj.allowSelf;
 
 	const passChecks = passAdminCheck && passModCheck && passBotCheck && passChannelTypeCheck && passOwnerCheck && passSelfCheck;
 
@@ -180,16 +315,21 @@ async function checkCommandPermissions(commandObj, message) {
 	};
 }
 
+export interface TaskMatch {
+	match: boolean
+	matching: Task[]
+	notMatching: Task[]
+}
+
 /**
  * Checks whether a message matches any tasks and if so, runs the tasks
- * @param {Discord.Message} message The message to handle
+ * @param {Message} message The message to handle
  * @param {Boolean} excludeLimited Whether or not to exclude limited tasks
- * @returns {Promise<Object>} Information about whether the message matched any tasks
+ * @returns {Promise<TaskMatch>} Information about whether the message matched any tasks
  */
-async function checkTasks(message, excludeLimited) {
+export async function checkTasks(message: Message, excludeLimited: boolean): Promise<TaskMatch> {
 	let limitedSelected = false;
-	/** @type {TaskContext} */
-	const tasksContext = {
+	const tasksContext: TaskContext = {
 		matching: [],
 		notMatching: [],
 	};
@@ -220,18 +360,27 @@ async function checkTasks(message, excludeLimited) {
 /**
  * Checks whether a task passes its permission checks
  * @param {Task} taskObj The task to check
- * @param {Discord.Message} message The message that triggered the task
+ * @param {Message} message The message that triggered the task
  * @returns {Promise<PermissionChecks>} Information about whether the task passes the permission checks
  */
-async function checkTaskPermissions(taskObj, message) {
+async function checkTaskPermissions(taskObj: Task, message: Message): Promise<PermissionChecks> {
 	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
 
-	const passAdminCheck = !taskObj.adminOnly || (message.guild && message.member.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !taskObj.modOnly || (message.guild && (message.member.hasPermission('ADMINISTRATOR') || modRoles === true || message.member.roles.cache.some(e => modRoles.includes(e.id))));
-	const passBotCheck = message.author.bot ? taskObj.allowBots || taskObj.botsOnly || message.author.id === message.client.user.id : !taskObj.botsOnly;
-	const passChannelTypeCheck = message.guild ? taskObj.inGuilds !== false : taskObj.inDms !== false;
-	const passOwnerCheck = !taskObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
-	const passSelfCheck = message.author.id !== message.client.user.id || taskObj.allowSelf;
+	if (message.guild && !message.member) {
+		throw new Error('Should be unreachable');
+	}
+
+	const fullTaskObj = defaultTaskValues(taskObj);
+
+	const messageMember = message.member as GuildMember;
+	const clientUser = message.client.user as ClientUser;
+
+	const passAdminCheck = !fullTaskObj.adminOnly || (Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
+	const passModCheck = !fullTaskObj.modOnly || (Boolean(message.guild) && (messageMember.hasPermission('ADMINISTRATOR') || modRoles === true || messageMember.roles.cache.some(e => modRoles.includes(e.id))));
+	const passBotCheck = message.author.bot ? fullTaskObj.allowBots || fullTaskObj.botsOnly || message.author.id === clientUser.id : !fullTaskObj.botsOnly;
+	const passChannelTypeCheck = message.guild ? fullTaskObj.inGuilds : fullTaskObj.inDms;
+	const passOwnerCheck = !fullTaskObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
+	const passSelfCheck = message.author.id !== clientUser.id || fullTaskObj.allowSelf;
 
 	const passChecks = passAdminCheck && passModCheck && passBotCheck && passChannelTypeCheck && passOwnerCheck && passSelfCheck;
 
@@ -250,7 +399,7 @@ async function checkTaskPermissions(taskObj, message) {
  * Get a list of all registered commands
  * @returns {Array<Command>} Array of command objects
  */
-function getCommands() {
+export function getCommands(): Command[] {
 	return commands.slice();
 }
 
@@ -258,7 +407,7 @@ function getCommands() {
  * Get a list of all global prefixes
  * @returns {Array<String>} Array of prefixes
  */
-function getGlobalPrefixes() {
+export function getGlobalPrefixes(): string[] {
 	return settings.globalPrefixes.slice();
 }
 
@@ -267,16 +416,21 @@ function getGlobalPrefixes() {
  * @param {String} guildId ID of the guild to get prefixes for
  * @returns {Array<String>} Array of prefixes
  */
-function getGuildPrefixes(guildId) {
-	return settings.guildPrefixes.has(guildId) ? settings.guildPrefixes.get(guildId).slice() : [];
+export function getGuildPrefixes(guildId: string): string[] {
+	return settings.guildPrefixes.has(guildId) ? (settings.guildPrefixes.get(guildId) as string[]).slice() : [];
+}
+
+export interface CommandRegistrationInfo {
+	registered: number
+	disabled: number
 }
 
 /**
  * Registers all files in a folder as commands
  * @param {String} commandsFolder Absolute path to the folder with the command files
- * @returns {Object} Information about how many commands were registered and/or disabled
+ * @returns {CommandRegistrationInfo} Information about how many commands were registered and/or disabled
  */
-function registerCommandsFolder(commandsFolder) {
+export function registerCommandsFolder(commandsFolder: string): CommandRegistrationInfo {
 	let disabled = 0;
 	let registered = 0;
 
@@ -285,7 +439,7 @@ function registerCommandsFolder(commandsFolder) {
 	const commandFiles = fs.readdirSync(commandsFolder);
 	for (const commandFile of commandFiles) {
 		/** @type {Command} */
-		const commandObj = require(path.join(commandsFolder, commandFile)); // eslint-disable-line global-require
+		const commandObj: Command = require(path.join(commandsFolder, commandFile)); // eslint-disable-line @typescript-eslint/no-var-requires
 		if (typeof commandObj.command !== 'string') {
 			throw new Error('Command must be a string');
 		}
@@ -329,12 +483,17 @@ function registerCommandsFolder(commandsFolder) {
 	};
 }
 
+interface TaskRegistrationInfo {
+	registered: number
+	disabled: number
+}
+
 /**
  * Registers all files in a folder as tasks
  * @param {String} tasksFolder Absolute path to the folder with the tasks files
- * @returns {Object} Information about how many tasks were registered and/or disabled
+ * @returns {TaskRegistrationInfo} Information about how many tasks were registered and/or disabled
  */
-function registerTasksFolder(tasksFolder) {
+export function registerTasksFolder(tasksFolder: string): TaskRegistrationInfo {
 	let disabled = 0;
 	let registered = 0;
 
@@ -342,9 +501,8 @@ function registerTasksFolder(tasksFolder) {
 
 	const taskFiles = fs.readdirSync(tasksFolder);
 	for (const taskFile of taskFiles) {
-		/** @type {Task} */
-		const taskObj = require(path.join(tasksFolder, taskFile)); // eslint-disable-line global-require
-		if (taskObj.disabled) {
+		const taskObj: Task = require(path.join(tasksFolder, taskFile)); // eslint-disable-line @typescript-eslint/no-var-requires
+		if (taskObj.disabled === true) {
 			disabled++;
 			continue;
 		}
@@ -376,7 +534,7 @@ function registerTasksFolder(tasksFolder) {
  * @param {GetModRoles} modRoleGetter The function used to get moderator roles
  * @returns {void}
  */
-function setModRoleGetter(modRoleGetter) {
+export function setModRoleGetter(modRoleGetter: GetModRoles): void {
 	if (typeof modRoleGetter !== 'function') {
 		throw new Error('modRoleGetter must be a function');
 	}
@@ -388,7 +546,7 @@ function setModRoleGetter(modRoleGetter) {
  * @param {String|Boolean} ownerId The owner ID, or true to allow all, or false to deny all
  * @returns {void}
  */
-function setOwnerId(ownerId) {
+export function setOwnerId(ownerId: string | boolean): void {
 	if (typeof ownerId !== 'string' && typeof ownerId !== 'boolean') {
 		throw new Error('ownerId must be either a string or a boolean');
 	} else if (ownerId === '') {
@@ -402,10 +560,10 @@ function setOwnerId(ownerId) {
  * @param {Array<String>|String} prefixes Prefix or list of prefixes to set
  * @returns {Array<String>} The set prefixes
  */
-function setGlobalPrefixes(prefixes) {
-	if (!prefixes) {
-		settings.globalPrefixes = [];
-		return [];
+export function setGlobalPrefixes(prefixes: string[] | string): string[] {
+	if (prefixes == null) {
+		settings.globalPrefixes = [''];
+		return [''];
 	}
 
 	const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
@@ -430,9 +588,9 @@ function setGlobalPrefixes(prefixes) {
  * @param {Array<String>|String} prefixes Prefix or list of prefixes to set
  * @returns {Array<String>} The set prefixes
  */
-function setGuildPrefixes(guildId, prefixes) {
+export function setGuildPrefixes(guildId: string, prefixes: string[] | string): string[] {
 	const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
-	if (!prefixes || prefixList.length === 0) {
+	if (prefixes == null || prefixList.length === 0) {
 		settings.guildPrefixes.delete(guildId);
 		return [];
 	}
