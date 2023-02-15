@@ -1,6 +1,6 @@
 {
   "name": "command-handler",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Personal command handler for discord.js.",
   "main": "dist/index.js",
   "scripts": {

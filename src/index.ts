@@ -439,7 +439,8 @@ export function registerCommandsFolder(commandsFolder: string): CommandRegistrat
 	const commandFiles = fs.readdirSync(commandsFolder);
 	for (const commandFile of commandFiles) {
 		/** @type {Command} */
-		const commandObj: Command = require(path.join(commandsFolder, commandFile)); // eslint-disable-line @typescript-eslint/no-var-requires
+		const commandImport = require(path.join(commandsFolder, commandFile)); // eslint-disable-line @typescript-eslint/no-var-requires
+		const commandObj: Command = commandImport.default ?? commandImport;
 		if (typeof commandObj.command !== 'string') {
 			throw new Error('Command must be a string');
 		}
@@ -501,7 +502,8 @@ export function registerTasksFolder(tasksFolder: string): TaskRegistrationInfo {
 
 	const taskFiles = fs.readdirSync(tasksFolder);
 	for (const taskFile of taskFiles) {
-		const taskObj: Task = require(path.join(tasksFolder, taskFile)); // eslint-disable-line @typescript-eslint/no-var-requires
+		const taskImport = require(path.join(tasksFolder, taskFile)); // eslint-disable-line @typescript-eslint/no-var-requires
+		const taskObj: Task = taskImport.default ?? taskImport;
 		if (taskObj.disabled === true) {
 			disabled++;
 			continue;
