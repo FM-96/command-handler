@@ -1,7 +1,6 @@
-import { ClientUser, GuildMember, Message } from 'discord.js';
-
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { ClientUser, GuildMember, Message } from 'discord.js';
 
 /**
  * A bot command
@@ -22,37 +21,37 @@ import path from 'path';
  * @property {Function} run The function defining command's behaviour
  */
 export interface Command {
-	disabled?: boolean
-	command: string
-	aliases: string[]
-	description?: string
-	usage?: string
-	ownerOnly?: boolean
-	adminOnly?: boolean
-	modOnly?: boolean
-	inGuilds?: boolean
-	inDms?: boolean
-	allowBots?: boolean
-	botsOnly?: boolean
-	allowSelf?: boolean
-	run: (message: Message, context: CommandContext) => Promise<void>
+	disabled?: boolean;
+	command: string;
+	aliases: string[];
+	description?: string;
+	usage?: string;
+	ownerOnly?: boolean;
+	adminOnly?: boolean;
+	modOnly?: boolean;
+	inGuilds?: boolean;
+	inDms?: boolean;
+	allowBots?: boolean;
+	botsOnly?: boolean;
+	allowSelf?: boolean;
+	run: (message: Message, context: CommandContext) => Promise<void>;
 }
 
 interface FullCommand {
-	disabled: boolean
-	command: string
-	aliases: string[]
-	description: string
-	usage: string
-	ownerOnly: boolean
-	adminOnly: boolean
-	modOnly: boolean
-	inGuilds: boolean
-	inDms: boolean
-	allowBots: boolean
-	botsOnly: boolean
-	allowSelf: boolean
-	run: (message: Message, context: CommandContext) => Promise<void>
+	disabled: boolean;
+	command: string;
+	aliases: string[];
+	description: string;
+	usage: string;
+	ownerOnly: boolean;
+	adminOnly: boolean;
+	modOnly: boolean;
+	inGuilds: boolean;
+	inDms: boolean;
+	allowBots: boolean;
+	botsOnly: boolean;
+	allowSelf: boolean;
+	run: (message: Message, context: CommandContext) => Promise<void>;
 }
 
 function defaultCommandValues(command: Command): FullCommand {
@@ -92,35 +91,35 @@ function defaultCommandValues(command: Command): FullCommand {
  * @property {Function} run The function defining task's behaviour
  */
 export interface Task {
-	disabled?: boolean
-	name: string
-	limited: boolean
-	ownerOnly?: boolean
-	adminOnly?: boolean
-	modOnly?: boolean
-	inGuilds?: boolean
-	inDms?: boolean
-	allowBots?: boolean
-	botsOnly?: boolean
-	allowSelf?: boolean
-	test: (message: Message) => Promise<boolean>
-	run: (message: Message, context: TaskContext) => Promise<void>
+	disabled?: boolean;
+	name: string;
+	limited: boolean;
+	ownerOnly?: boolean;
+	adminOnly?: boolean;
+	modOnly?: boolean;
+	inGuilds?: boolean;
+	inDms?: boolean;
+	allowBots?: boolean;
+	botsOnly?: boolean;
+	allowSelf?: boolean;
+	test: (message: Message) => Promise<boolean>;
+	run: (message: Message, context: TaskContext) => Promise<void>;
 }
 
 interface FullTask {
-	disabled: boolean
-	name: string
-	limited: boolean
-	ownerOnly: boolean
-	adminOnly: boolean
-	modOnly: boolean
-	inGuilds: boolean
-	inDms: boolean
-	allowBots: boolean
-	botsOnly: boolean
-	allowSelf: boolean
-	test: (message: Message) => Promise<boolean>
-	run: (message: Message, context: TaskContext) => Promise<void>
+	disabled: boolean;
+	name: string;
+	limited: boolean;
+	ownerOnly: boolean;
+	adminOnly: boolean;
+	modOnly: boolean;
+	inGuilds: boolean;
+	inDms: boolean;
+	allowBots: boolean;
+	botsOnly: boolean;
+	allowSelf: boolean;
+	test: (message: Message) => Promise<boolean>;
+	run: (message: Message, context: TaskContext) => Promise<void>;
 }
 
 function defaultTaskValues(task: Task): FullTask {
@@ -153,13 +152,13 @@ function defaultTaskValues(task: Task): FullTask {
  * @property {Boolean} passSelfCheck
  */
 export interface PermissionChecks {
-	passChecks: boolean
-	passAdminCheck: boolean
-	passModCheck: boolean
-	passBotCheck: boolean
-	passChannelTypeCheck: boolean
-	passOwnerCheck: boolean
-	passSelfCheck: boolean
+	passChecks: boolean;
+	passAdminCheck: boolean;
+	passModCheck: boolean;
+	passBotCheck: boolean;
+	passChannelTypeCheck: boolean;
+	passOwnerCheck: boolean;
+	passSelfCheck: boolean;
 }
 
 /**
@@ -173,12 +172,12 @@ export interface PermissionChecks {
  * @property {Command} commandObj The command
  */
 export interface CommandContext {
-	argsOffset: number
-	args: string
-	argv: string[]
-	command: string
-	prefix: string
-	commandObj: Command
+	argsOffset: number;
+	args: string;
+	argv: string[];
+	command: string;
+	prefix: string;
+	commandObj: Command;
 }
 
 /**
@@ -188,8 +187,8 @@ export interface CommandContext {
  * @property {Array<Task>} notMatching of tasks that weren't triggered by the message
  */
 export interface TaskContext {
-	matching: Task[]
-	notMatching: Task[]
+	matching: Task[];
+	notMatching: Task[];
 }
 
 /**
@@ -201,10 +200,10 @@ export interface TaskContext {
 export type GetModRoles = (guildId: string) => Promise<string[] | true>;
 
 export interface Settings {
-	ownerId: string | boolean
-	globalPrefixes: string[]
-	guildPrefixes: Map<string, string[]>
-	getModRoles: GetModRoles
+	ownerId: string | boolean;
+	globalPrefixes: string[];
+	guildPrefixes: Map<string, string[]>;
+	getModRoles: GetModRoles;
 }
 
 const settings: Settings = {
@@ -218,14 +217,14 @@ const commands: Command[] = [];
 const tasks: Task[] = [];
 
 interface CommandMatchNoMatch {
-	match: false
+	match: false;
 }
 
 interface CommandMatchMatch {
-	match: true
-	command: string
-	checks: PermissionChecks
-	commandObj: Command
+	match: true;
+	command: string;
+	checks: PermissionChecks;
+	commandObj: Command;
 }
 
 export type CommandMatch = CommandMatchNoMatch | CommandMatchMatch;
@@ -238,13 +237,16 @@ export type CommandMatch = CommandMatchNoMatch | CommandMatchMatch;
 export async function checkCommand(message: Message): Promise<CommandMatch> {
 	const validPrefixes = settings.globalPrefixes;
 	if (message.guild && settings.guildPrefixes.has(message.guild.id)) {
-		validPrefixes.push(...settings.guildPrefixes.get(message.guild.id) as string[]);
+		validPrefixes.push(...(settings.guildPrefixes.get(message.guild.id) as string[]));
 	}
 	for (const prefix of validPrefixes) {
 		for (const commandObj of commands) {
 			const commandVariations = [commandObj.command, ...commandObj.aliases];
 			for (const commandVariation of commandVariations) {
-				if (message.content.toLowerCase().startsWith(`${prefix}${commandVariation}`) && /^\s|^$/.test(message.content.toLowerCase().slice(`${prefix}${commandVariation}`.length))) {
+				if (
+					message.content.toLowerCase().startsWith(`${prefix}${commandVariation}`) &&
+					/^\s|^$/.test(message.content.toLowerCase().slice(`${prefix}${commandVariation}`.length))
+				) {
 					if (message.guild && !message.member) {
 						await message.guild.members.fetch(message.author);
 					}
@@ -287,22 +289,48 @@ export async function checkCommand(message: Message): Promise<CommandMatch> {
  * @param {Message} message The message of the command
  * @returns {Promise<PermissionChecks>} Information about whether the command passes the permission checks
  */
-async function checkCommandPermissions(commandObj: Command, message: Message): Promise<PermissionChecks> {
-	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
+async function checkCommandPermissions(
+	commandObj: Command,
+	message: Message,
+): Promise<PermissionChecks> {
+	const modRoles = message.guild ? await settings.getModRoles(message.guild.id) : [];
 
 	const fullCommandObj = defaultCommandValues(commandObj);
 
 	const messageMember = message.member as GuildMember;
 	const clientUser = message.client.user as ClientUser;
 
-	const passAdminCheck = !fullCommandObj.adminOnly || (Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !fullCommandObj.modOnly || (Boolean(message.guild) && (messageMember.hasPermission('ADMINISTRATOR') || modRoles === true || messageMember.roles.cache.some(e => modRoles.includes(e.id))));
-	const passBotCheck = message.author.bot ? fullCommandObj.allowBots || fullCommandObj.botsOnly || message.author.id === clientUser.id : !fullCommandObj.botsOnly;
+	const passAdminCheck =
+		!fullCommandObj.adminOnly ||
+		(Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
+
+	const passModCheck =
+		!fullCommandObj.modOnly ||
+		(Boolean(message.guild) &&
+			(messageMember.hasPermission('ADMINISTRATOR') ||
+				modRoles === true ||
+				messageMember.roles.cache.some((e) => modRoles.includes(e.id))));
+
+	const passBotCheck = message.author.bot
+		? fullCommandObj.allowBots || fullCommandObj.botsOnly || message.author.id === clientUser.id
+		: !fullCommandObj.botsOnly;
+
 	const passChannelTypeCheck = message.guild ? fullCommandObj.inGuilds : fullCommandObj.inDms;
-	const passOwnerCheck = !fullCommandObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
+
+	const passOwnerCheck =
+		!fullCommandObj.ownerOnly ||
+		settings.ownerId === true ||
+		(settings.ownerId !== false && message.author.id === settings.ownerId);
+
 	const passSelfCheck = message.author.id !== clientUser.id || fullCommandObj.allowSelf;
 
-	const passChecks = passAdminCheck && passModCheck && passBotCheck && passChannelTypeCheck && passOwnerCheck && passSelfCheck;
+	const passChecks =
+		passAdminCheck &&
+		passModCheck &&
+		passBotCheck &&
+		passChannelTypeCheck &&
+		passOwnerCheck &&
+		passSelfCheck;
 
 	return {
 		passChecks,
@@ -316,9 +344,9 @@ async function checkCommandPermissions(commandObj: Command, message: Message): P
 }
 
 export interface TaskMatch {
-	match: boolean
-	matching: Task[]
-	notMatching: Task[]
+	match: boolean;
+	matching: Task[];
+	notMatching: Task[];
 }
 
 /**
@@ -334,13 +362,17 @@ export async function checkTasks(message: Message, excludeLimited: boolean): Pro
 		notMatching: [],
 	};
 	for (const taskObj of tasks) {
-		let testResult;
+		let testResult: boolean;
 		try {
 			testResult = await taskObj.test(message);
 		} catch (err) {
 			testResult = false;
 		}
-		if (testResult && (await checkTaskPermissions(taskObj, message)).passChecks && (!taskObj.limited || (!limitedSelected && !excludeLimited))) {
+		if (
+			testResult &&
+			(await checkTaskPermissions(taskObj, message)).passChecks &&
+			(!taskObj.limited || (!limitedSelected && !excludeLimited))
+		) {
 			tasksContext.matching.push(taskObj);
 			limitedSelected = taskObj.limited;
 		} else {
@@ -364,7 +396,7 @@ export async function checkTasks(message: Message, excludeLimited: boolean): Pro
  * @returns {Promise<PermissionChecks>} Information about whether the task passes the permission checks
  */
 async function checkTaskPermissions(taskObj: Task, message: Message): Promise<PermissionChecks> {
-	const modRoles = message.guild ? (await settings.getModRoles(message.guild.id)) : [];
+	const modRoles = message.guild ? await settings.getModRoles(message.guild.id) : [];
 
 	if (message.guild && !message.member) {
 		throw new Error('Should be unreachable');
@@ -375,14 +407,37 @@ async function checkTaskPermissions(taskObj: Task, message: Message): Promise<Pe
 	const messageMember = message.member as GuildMember;
 	const clientUser = message.client.user as ClientUser;
 
-	const passAdminCheck = !fullTaskObj.adminOnly || (Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
-	const passModCheck = !fullTaskObj.modOnly || (Boolean(message.guild) && (messageMember.hasPermission('ADMINISTRATOR') || modRoles === true || messageMember.roles.cache.some(e => modRoles.includes(e.id))));
-	const passBotCheck = message.author.bot ? fullTaskObj.allowBots || fullTaskObj.botsOnly || message.author.id === clientUser.id : !fullTaskObj.botsOnly;
+	const passAdminCheck =
+		!fullTaskObj.adminOnly ||
+		(Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
+
+	const passModCheck =
+		!fullTaskObj.modOnly ||
+		(Boolean(message.guild) &&
+			(messageMember.hasPermission('ADMINISTRATOR') ||
+				modRoles === true ||
+				messageMember.roles.cache.some((e) => modRoles.includes(e.id))));
+
+	const passBotCheck = message.author.bot
+		? fullTaskObj.allowBots || fullTaskObj.botsOnly || message.author.id === clientUser.id
+		: !fullTaskObj.botsOnly;
+
 	const passChannelTypeCheck = message.guild ? fullTaskObj.inGuilds : fullTaskObj.inDms;
-	const passOwnerCheck = !fullTaskObj.ownerOnly || settings.ownerId === true || (settings.ownerId !== false && message.author.id === settings.ownerId);
+
+	const passOwnerCheck =
+		!fullTaskObj.ownerOnly ||
+		settings.ownerId === true ||
+		(settings.ownerId !== false && message.author.id === settings.ownerId);
+
 	const passSelfCheck = message.author.id !== clientUser.id || fullTaskObj.allowSelf;
 
-	const passChecks = passAdminCheck && passModCheck && passBotCheck && passChannelTypeCheck && passOwnerCheck && passSelfCheck;
+	const passChecks =
+		passAdminCheck &&
+		passModCheck &&
+		passBotCheck &&
+		passChannelTypeCheck &&
+		passOwnerCheck &&
+		passSelfCheck;
 
 	return {
 		passChecks,
@@ -417,12 +472,14 @@ export function getGlobalPrefixes(): string[] {
  * @returns {Array<String>} Array of prefixes
  */
 export function getGuildPrefixes(guildId: string): string[] {
-	return settings.guildPrefixes.has(guildId) ? (settings.guildPrefixes.get(guildId) as string[]).slice() : [];
+	return settings.guildPrefixes.has(guildId)
+		? (settings.guildPrefixes.get(guildId) as string[]).slice()
+		: [];
 }
 
 export interface CommandRegistrationInfo {
-	registered: number
-	disabled: number
+	registered: number;
+	disabled: number;
 }
 
 /**
@@ -434,7 +491,7 @@ export function registerCommandsFolder(commandsFolder: string): CommandRegistrat
 	let disabled = 0;
 	let registered = 0;
 
-	const commandStrings = commands.map(e => e.command);
+	const commandStrings = commands.map((e) => e.command);
 
 	const commandFiles = fs.readdirSync(commandsFolder);
 	for (const commandFile of commandFiles) {
@@ -451,17 +508,19 @@ export function registerCommandsFolder(commandsFolder: string): CommandRegistrat
 		}
 		const commandVariations = [commandObj.command];
 		if (Array.isArray(commandObj.aliases)) {
-			if (commandObj.aliases.some(e => typeof e !== 'string')) {
+			if (commandObj.aliases.some((e) => typeof e !== 'string')) {
 				throw new Error('Command aliases must be strings');
 			}
-			commandObj.aliases = commandObj.aliases.map(e => e.trim().toLowerCase());
+			commandObj.aliases = commandObj.aliases.map((e) => e.trim().toLowerCase());
 			commandVariations.push(...commandObj.aliases);
 		} else {
 			commandObj.aliases = [];
 		}
 		for (const commandVariation of commandVariations) {
 			if (commandStrings.includes(commandVariation)) {
-				throw new Error(`Duplicate command: ${commandVariation}${commandVariation !== commandObj.command ? ` (alias of ${commandObj.command})` : ''}`);
+				throw new Error(
+					`Duplicate command: ${commandVariation}${commandVariation !== commandObj.command ? ` (alias of ${commandObj.command})` : ''}`,
+				);
 			}
 		}
 		commands.push(commandObj);
@@ -485,8 +544,8 @@ export function registerCommandsFolder(commandsFolder: string): CommandRegistrat
 }
 
 interface TaskRegistrationInfo {
-	registered: number
-	disabled: number
+	registered: number;
+	disabled: number;
 }
 
 /**
@@ -498,7 +557,7 @@ export function registerTasksFolder(tasksFolder: string): TaskRegistrationInfo {
 	let disabled = 0;
 	let registered = 0;
 
-	const tasknames = tasks.map(e => e.name);
+	const tasknames = tasks.map((e) => e.name);
 
 	const taskFiles = fs.readdirSync(tasksFolder);
 	for (const taskFile of taskFiles) {
@@ -509,7 +568,7 @@ export function registerTasksFolder(tasksFolder: string): TaskRegistrationInfo {
 			continue;
 		}
 		if (tasknames.includes(taskObj.name)) {
-			throw new Error('Duplicate task: ' + taskObj.name);
+			throw new Error(`Duplicate task: ${taskObj.name}`);
 		}
 		tasks.push(taskObj);
 		tasknames.push(taskObj.name);
@@ -551,7 +610,8 @@ export function setModRoleGetter(modRoleGetter: GetModRoles): void {
 export function setOwnerId(ownerId: string | boolean): void {
 	if (typeof ownerId !== 'string' && typeof ownerId !== 'boolean') {
 		throw new Error('ownerId must be either a string or a boolean');
-	} else if (ownerId === '') {
+	}
+	if (ownerId === '') {
 		throw new Error('ownerId cannot be an empty string');
 	}
 	settings.ownerId = ownerId;
