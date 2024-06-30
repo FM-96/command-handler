@@ -1,6 +1,6 @@
 {
   "name": "command-handler",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "description": "Personal command handler for discord.js.",
   "main": "dist/index.js",
   "scripts": {
@@ -26,7 +26,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
     "@types/node": "^20.14.9",
-    "discord.js": "^12.5.3",
+    "discord.js": "^14.15.3",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.2"

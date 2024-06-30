@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ClientUser, GuildMember, Message } from 'discord.js';
+import { type ClientUser, type GuildMember, type Message, PermissionFlagsBits } from 'discord.js';
 
 /**
  * A bot command
@@ -302,12 +302,12 @@ async function checkCommandPermissions(
 
 	const passAdminCheck =
 		!fullCommandObj.adminOnly ||
-		(Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
+		(Boolean(message.guild) && messageMember.permissions.has(PermissionFlagsBits.Administrator));
 
 	const passModCheck =
 		!fullCommandObj.modOnly ||
 		(Boolean(message.guild) &&
-			(messageMember.hasPermission('ADMINISTRATOR') ||
+			(messageMember.permissions.has(PermissionFlagsBits.Administrator) ||
 				modRoles === true ||
 				messageMember.roles.cache.some((e) => modRoles.includes(e.id))));
 
@@ -409,12 +409,12 @@ async function checkTaskPermissions(taskObj: Task, message: Message): Promise<Pe
 
 	const passAdminCheck =
 		!fullTaskObj.adminOnly ||
-		(Boolean(message.guild) && messageMember.hasPermission('ADMINISTRATOR'));
+		(Boolean(message.guild) && messageMember.permissions.has(PermissionFlagsBits.Administrator));
 
 	const passModCheck =
 		!fullTaskObj.modOnly ||
 		(Boolean(message.guild) &&
-			(messageMember.hasPermission('ADMINISTRATOR') ||
+			(messageMember.permissions.has(PermissionFlagsBits.Administrator) ||
 				modRoles === true ||
 				messageMember.roles.cache.some((e) => modRoles.includes(e.id))));
 
