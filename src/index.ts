@@ -365,7 +365,7 @@ export async function checkTasks(message: Message, excludeLimited: boolean): Pro
 		let testResult: boolean;
 		try {
 			testResult = await taskObj.test(message);
-		} catch (err) {
+		} catch (_err) {
 			testResult = false;
 		}
 		if (
