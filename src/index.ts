@@ -667,3 +667,17 @@ export function setGuildPrefixes(guildId: string, prefixes: string[] | string): 
 	settings.guildPrefixes.set(guildId, uniquePrefixList);
 	return uniquePrefixList;
 }
+
+export default {
+	checkCommand,
+	checkTasks,
+	getCommands,
+	getGlobalPrefixes,
+	getGuildPrefixes,
+	registerCommandsFolder,
+	registerTasksFolder,
+	setModRoleGetter,
+	setOwnerId,
+	setGlobalPrefixes,
+	setGuildPrefixes,
+};
