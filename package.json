@@ -25,8 +25,8 @@
   "homepage": "https://github.com/FM-96/command-handler#readme",
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@types/node": "^20.14.9",
-    "discord.js": "^14.15.3",
+    "@types/node": "^24.5.1",
+    "discord.js": "^14.22.1",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.2"
