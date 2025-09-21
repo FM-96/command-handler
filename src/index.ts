@@ -493,7 +493,9 @@ export function registerCommandsFolder(commandsFolder: string): CommandRegistrat
 
 	const commandStrings = commands.map((e) => e.command);
 
-	const commandFiles = fs.readdirSync(commandsFolder);
+	const commandFiles = fs
+		.readdirSync(commandsFolder)
+		.filter((e) => e.endsWith('.js') || (e.endsWith('.ts') && !e.endsWith('.d.ts')));
 	for (const commandFile of commandFiles) {
 		/** @type {Command} */
 		const commandImport = require(path.join(commandsFolder, commandFile)); // eslint-disable-line @typescript-eslint/no-var-requires
@@ -559,7 +561,9 @@ export function registerTasksFolder(tasksFolder: string): TaskRegistrationInfo {
 
 	const tasknames = tasks.map((e) => e.name);
 
-	const taskFiles = fs.readdirSync(tasksFolder);
+	const taskFiles = fs
+		.readdirSync(tasksFolder)
+		.filter((e) => e.endsWith('.js') || (e.endsWith('.ts') && !e.endsWith('.d.ts')));
 	for (const taskFile of taskFiles) {
 		const taskImport = require(path.join(tasksFolder, taskFile)); // eslint-disable-line @typescript-eslint/no-var-requires
 		const taskObj: Task = taskImport.default ?? taskImport;
